@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MCE Placement Action Tracker</title>
+<meta name="description" content="Jira-style action tracker for the MCE Placement Strengthening Subcommittee" />
+<style>
+:root{
+  --bg:#f7f8fa;--panel:#fff;--panel2:#f1f3f5;--text:#172b4d;--muted:#5e6c84;
+  --border:#dfe1e6;--brand:#0c66e4;--brand2:#0055cc;--success:#1f845a;--warn:#e56910;
+  --danger:#c9372c;--purple:#6e5dc6;--shadow:0 8px 24px rgba(9,30,66,.08);
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh}
+.topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;padding:12px 20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;white-space:nowrap}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#0c66e4,#579dff);display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:var(--shadow)}
+.search{flex:1;position:relative;max-width:620px}
+.search input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--border);border-radius:8px;background:#f7f8f9}
+.search span{position:absolute;left:12px;top:9px;color:var(--muted)}
+.top-actions{display:flex;gap:8px;margin-left:auto}
+.btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:9px 12px;color:var(--text);font-weight:650}
+.btn:hover{background:#f1f2f4}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand2)}
+.btn.danger{color:#fff;background:var(--danger);border-color:var(--danger)}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 59px)}
+.sidebar{border-right:1px solid var(--border);background:#fff;padding:20px 14px}
+.project{padding:0 8px 16px}
+.project h2{font-size:15px;margin:0 0 3px}.project p{font-size:12px;color:var(--muted);margin:0}
+.nav{display:grid;gap:4px}
+.nav button{border:0;background:transparent;text-align:left;padding:10px 12px;border-radius:7px;color:#42526e;font-weight:650}
+.nav button.active,.nav button:hover{background:#e9f2ff;color:#0c66e4}
+.nav hr{border:0;border-top:1px solid var(--border);margin:10px 0}
+.content{padding:24px;overflow:auto}
+.header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.header h1{font-size:26px;margin:0 0 5px}.header p{margin:0;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 18px}
+.toolbar select,.toolbar input{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text)}
+.cards{display:grid;grid-template-columns:repeat(5,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:15px;box-shadow:0 1px 2px rgba(9,30,66,.04)}
+.card .label{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.card .value{font-size:28px;font-weight:800;margin-top:5px}
+.card .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 1px 2px rgba(9,30,66,.04);overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}
+.panel-head h3{margin:0;font-size:16px}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:1180px}
+th,td{padding:11px 12px;border-bottom:1px solid #ebecf0;text-align:left;vertical-align:top;font-size:13px}
+th{position:sticky;top:0;background:#f7f8f9;color:#42526e;font-size:12px;text-transform:uppercase;letter-spacing:.03em;z-index:1}
+tr:hover td{background:#fafbfc}
+.issue-key{color:#0c66e4;font-weight:800;white-space:nowrap}
+.titlecell{font-weight:700;min-width:280px}
+.muted{color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;white-space:nowrap}
+.status-open{background:#e9f2ff;color:#0c66e4}
+.status-progress{background:#fff3eb;color:#a54800}
+.status-blocked{background:#ffebe6;color:#ae2a19}
+.status-done{background:#dcfff1;color:#216e4e}
+.p-high{background:#ffebe6;color:#ae2a19}
+.p-medium{background:#fff7d6;color:#7f5f01}
+.p-low{background:#e9f2ff;color:#0c66e4}
+.progress{width:130px;height:8px;background:#ebecf0;border-radius:99px;overflow:hidden}
+.progress>span{display:block;height:100%;background:var(--brand);border-radius:99px}
+.owner{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#dfe1e6;font-size:10px;font-weight:900;color:#42526e}
+.row-actions{display:flex;gap:6px}
+.iconbtn{border:1px solid var(--border);background:#fff;border-radius:7px;padding:6px 8px}
+.iconbtn:hover{background:#f1f2f4}
+.empty{padding:50px;text-align:center;color:var(--muted)}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:14px;align-items:start}
+.column{background:#f1f2f4;border-radius:10px;padding:10px;min-height:400px}
+.column h4{margin:2px 4px 10px;font-size:13px;color:#44546f}
+.issue-card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:9px;box-shadow:0 1px 2px rgba(9,30,66,.06)}
+.issue-card strong{display:block;margin:5px 0 8px}
+.issue-card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:11px}
+.modal{position:fixed;inset:0;background:rgba(9,30,66,.44);display:none;place-items:center;z-index:50;padding:20px}
+.modal.show{display:grid}
+.dialog{width:min(900px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 70px rgba(9,30,66,.25)}
+.dialog-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border)}
+.dialog-head h2{margin:0;font-size:20px}
+.dialog-body{padding:18px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:grid;gap:6px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;font-weight:800;color:#44546f}
+.field input,.field select,.field textarea{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:#fff}
+.field textarea{min-height:88px;resize:vertical}
+.dialog-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--border)}
+.settings{max-width:650px}
+.note{background:#f7f8f9;border-left:4px solid var(--brand);padding:10px 12px;border-radius:6px;color:#44546f;font-size:13px}
+.toast{position:fixed;right:20px;bottom:20px;background:#172b4d;color:#fff;padding:11px 14px;border-radius:9px;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.2s;z-index:80}
+.toast.show{opacity:1;transform:translateY(0)}
+.view-hidden{display:none}
+.due-late{color:var(--danger);font-weight:800}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#9fadbc;margin-right:6px}
+.sync-dot.ok{background:#22a06b}.sync-dot.warn{background:#e2b203}
+@media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{display:none}.cards{grid-template-columns:repeat(2,1fr)}.kanban{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.content{padding:14px}.topbar{padding:10px}.brand span{display:none}.cards{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}.kanban{grid-template-columns:1fr}.top-actions .secondary{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">M</div><span>MCE Placement Tracker</span></div>
+    <div class="search"><span>⌕</span><input id="globalSearch" placeholder="Search actions, owners, categories..." /></div>
+    <div class="top-actions">
+      <button class="btn secondary" id="settingsBtn">⚙ Settings</button>
+      <button class="btn primary" id="createBtn">＋ Create Action</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="project">
+        <h2>Placement Strengthening</h2>
+        <p>Subcommittee Action Board</p>
+      </div>
+      <nav class="nav">
+        <button data-view="dashboard" class="active">▦ Dashboard</button>
+        <button data-view="list">☷ Action Register</button>
+        <button data-view="board">▤ Board</button>
+        <hr>
+        <button id="refreshBtn">↻ Refresh Data</button>
+        <button id="exportBtn">⇩ Export CSV</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <section id="dashboardView">
+        <div class="header">
+          <div><h1>Placement Strengthening Dashboard</h1><p>Track decisions, owners, deadlines and month-on-month execution.</p></div>
+          <div class="muted" style="font-size:12px;padding-top:8px"><span id="syncDot" class="sync-dot"></span><span id="syncLabel">Local mode</span></div>
+        </div>
+        <div class="cards">
+          <div class="card"><div class="label">Total Actions</div><div class="value" id="kpiTotal">0</div><div class="sub">All tracked actions</div></div>
+          <div class="card"><div class="label">In Progress</div><div class="value" id="kpiProgress">0</div><div class="sub">Currently active</div></div>
+          <div class="card"><div class="label">Blocked</div><div class="value" id="kpiBlocked">0</div><div class="sub">Need intervention</div></div>
+          <div class="card"><div class="label">Completed</div><div class="value" id="kpiDone">0</div><div class="sub">Closed actions</div></div>
+          <div class="card"><div class="label">Overdue</div><div class="value" id="kpiOverdue">0</div><div class="sub">Past target date</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Priority Action Register</h3><button class="btn" onclick="switchView('list')">View all</button></div>
+          <div class="table-wrap"><table><thead><tr>
+            <th>Key</th><th>Action</th><th>Owner</th><th>Category</th><th>Status</th><th>Priority</th><th>Due</th><th>Progress</th><th></th>
+          </tr></thead><tbody id="dashboardRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="listView" class="view-hidden">
+        <div class="header"><div><h1>Action Register</h1><p>Single source of truth for all committee actions.</p></div></div>
+        <div class="toolbar">
+          <select id="statusFilter"><option value="">All Statuses</option><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select>
+          <select id="priorityFilter"><option value="">All Priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
+          <select id="categoryFilter"><option value="">All Categories</option></select>
+          <input type="date" id="dueFilter" title="Show actions due on or before date">
+          <button class="btn" id="clearFilters">Clear filters</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Actions</h3><span class="muted" id="resultCount"></span></div>
+          <div class="table-wrap"><table><thead><tr>
+            <th>Key</th><th>Action</th><th>Owner</th><th>Category</th><th>Status</th><th>Priority</th><th>Due</th><th>Progress</th><th>Next Step</th><th></th>
+          </tr></thead><tbody id="listRows"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="boardView" class="view-hidden">
+        <div class="header"><div><h1>Execution Board</h1><p>Jira-style flow from Open to Done.</p></div></div>
+        <div class="kanban" id="kanban"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal" id="issueModal">
+  <div class="dialog">
+    <div class="dialog-head"><h2 id="modalTitle">Create Action</h2><button class="iconbtn" onclick="closeIssueModal()">✕</button></div>
+    <div class="dialog-body">
+      <div class="formgrid">
+        <div class="field full"><label>Action title</label><input id="fTitle" placeholder="e.g., Build recruiter feedback system"></div>
+        <div class="field full"><label>Description / success criteria</label><textarea id="fDescription"></textarea></div>
+        <div class="field"><label>Owner</label><input id="fOwner" placeholder="Placement Cell / Kiran / Committee..."></div>
+        <div class="field"><label>Category</label><input id="fCategory" list="categoryList" placeholder="Data & Analytics"></div>
+        <div class="field"><label>Status</label><select id="fStatus"><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select></div>
+        <div class="field"><label>Priority</label><select id="fPriority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div class="field"><label>Due date</label><input type="date" id="fDue"></div>
+        <div class="field"><label>Progress %</label><input type="number" id="fProgress" min="0" max="100" value="0"></div>
+        <div class="field full"><label>Next step</label><textarea id="fNextStep" placeholder="What must happen next?"></textarea></div>
+        <div class="field full"><label>Update / comments</label><textarea id="fComments" placeholder="Latest update, dependencies, decisions..."></textarea></div>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn danger" id="deleteBtn" style="display:none;margin-right:auto">Delete</button>
+      <button class="btn" onclick="closeIssueModal()">Cancel</button>
+      <button class="btn primary" id="saveBtn">Save Action</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="settingsModal">
+  <div class="dialog settings">
+    <div class="dialog-head"><h2>Data Connection</h2><button class="iconbtn" onclick="closeSettings()">✕</button></div>
+    <div class="dialog-body">
+      <div class="note">Leave the URL blank to use browser local storage. After deploying the supplied Google Apps Script as a Web App, paste its <b>/exec</b> URL here.</div>
+      <div class="field" style="margin-top:14px"><label>Google Apps Script Web App URL</label><input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+      <div class="field" style="margin-top:14px"><label>Optional edit key</label><input id="editKey" type="password" placeholder="Required only if you set EDIT_KEY in Code.gs"></div>
+      <div class="note" style="margin-top:14px">The edit key is stored only in this browser's local storage. For high-security or public deployments, use authenticated APIs rather than a shared key.</div>
+    </div>
+    <div class="dialog-foot"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn primary" id="saveSettings">Save & Connect</button></div>
+  </div>
+</div>
+
+<datalist id="categoryList"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED = [
+{title:"Create comprehensive placement dashboard",description:"Consolidate graduate, eligible, registered, attendance, offers, internship, PPO, higher studies and off-campus outcome data.",owner:"Training & Placement Cell",category:"Data & Analytics",status:"Open",priority:"High",dueDate:"2026-10-17",progress:10,nextStep:"Agree data dictionary and consolidate last three academic years.",comments:"First action from Placement Strengthening Subcommittee."},
+{title:"Build structured recruiter feedback system",description:"Capture technical, communication, aptitude, articulation, confidence, project quality and rejection reasons.",owner:"Placement Cell + Alumni",category:"Recruiter Intelligence",status:"Open",priority:"High",dueDate:"2026-10-24",progress:5,nextStep:"Create a standard recruiter feedback form and pilot with recent recruiters.",comments:"Feedback should be aggregateable by role and branch."},
+{title:"Track interview conversion funnel",description:"Track Eligible → Registered → Attended → Aptitude → Technical → HR → Offer for every major recruiter.",owner:"Training & Placement Cell",category:"Data & Analytics",status:"Open",priority:"High",dueDate:"2026-10-24",progress:0,nextStep:"Add funnel fields to placement tracker.",comments:"Use as a lead-measure dashboard."},
+{title:"Track internship-to-PPO conversion",description:"Measure internship completion, PPO eligibility, PPO issued, accepted and joined.",owner:"Training & Placement Cell",category:"Internships & PPO",status:"Open",priority:"High",dueDate:"2026-10-31",progress:0,nextStep:"Define internship/PPO taxonomy and update historical records.",comments:"Avoid counting internship as placement."},
+{title:"100% student career-intent declaration",description:"Every graduating student must declare campus placement, off-campus, higher studies, exams, entrepreneurship, family business or other.",owner:"Placement Cell + HODs",category:"Student Engagement",status:"In Progress",priority:"High",dueDate:"2026-10-20",progress:35,nextStep:"Follow up with non-responders and publish response dashboard.",comments:"Approx. 650 of 950 had registered; visibility required for remaining students."},
+{title:"Parent communication protocol",description:"Inform parents about placement support and student opt-out / non-response in a constructive and transparent manner.",owner:"Principal + Placement Cell",category:"Parent Engagement",status:"Open",priority:"Medium",dueDate:"2026-11-07",progress:0,nextStep:"Draft parent communication and include in orientation.",comments:"Use orientation touchpoints."},
+{title:"Study student motivation and drive absenteeism",description:"Understand why students register but do not attend and why some do not register.",owner:"Placement Cell + Faculty Mentors",category:"Student Engagement",status:"Open",priority:"High",dueDate:"2026-10-31",progress:10,nextStep:"Run student survey plus small-group interviews.",comments:"Explore confidence, goals, salary expectations, geography, higher studies and psychology."},
+{title:"Faculty industry network initiative",description:"Create a mechanism for faculty to build at least one meaningful alumni or industry relationship.",owner:"Principal + HODs",category:"Faculty & Industry",status:"Open",priority:"Medium",dueDate:"2026-11-21",progress:0,nextStep:"Define expected contribution and reporting mechanism.",comments:"Potentially integrate into performance appraisal."},
+{title:"Review faculty performance framework",description:"Revisit prior multi-dimensional appraisal framework including student feedback, mentoring, teaching effectiveness and industry engagement.",owner:"Principal + Senior Faculty",category:"Faculty & Industry",status:"Open",priority:"Medium",dueDate:"2026-11-30",progress:0,nextStep:"Retrieve earlier framework and shortlist metrics for pilot.",comments:"Build on prior work rather than start from scratch."},
+{title:"Benchmark peer institutions",description:"Compare placement %, recruiter mix, salary, core recruitment, internships, admissions rank and branding practices.",owner:"Committee",category:"Benchmarking",status:"Open",priority:"High",dueDate:"2026-10-31",progress:0,nextStep:"Identify 5–8 peer colleges and assign data owners.",comments:"Include RV, BMS, NIE and relevant Karnataka peers."},
+{title:"Prepare HR / Placement Conclave concept",description:"Design a Bengaluru/Hassan HR conclave to engage 20–30 employers and obtain structured feedback.",owner:"Committee + Alumni",category:"Recruiter Engagement",status:"Open",priority:"High",dueDate:"2026-11-15",progress:0,nextStep:"Develop concept note, invitee list, format and approximate budget.",comments:"Potential flagship employer-branding initiative."},
+{title:"Explore Bengaluru industry liaison presence",description:"Evaluate a small MCE industry liaison / recruiter relationship mechanism in Bengaluru.",owner:"Principal + Alumni",category:"Recruiter Engagement",status:"Open",priority:"Medium",dueDate:"2026-12-15",progress:0,nextStep:"Define role profile, operating model and success measures.",comments:"Past attempt should be reviewed for lessons learned."},
+{title:"Admissions outreach and MCE branding",description:"Map high-potential PUCs/schools and communicate MCE placements, alumni, projects, incubation and career ecosystem.",owner:"Admissions + Alumni + Faculty",category:"Branding & Admissions",status:"Open",priority:"Medium",dueDate:"2026-12-31",progress:0,nextStep:"Map Hassan and surrounding district feeder institutions.",comments:"Placement and admissions brand reinforce each other."},
+{title:"Future skills framework",description:"Use authoritative future-of-jobs/skills reports to guide student and faculty upskilling.",owner:"Faculty Development + Placement Cell",category:"Future Skills",status:"Open",priority:"Medium",dueDate:"2026-11-30",progress:0,nextStep:"Create an MCE future-skills matrix by branch.",comments:"Translate trends into training roadmap."},
+{title:"Alumni observation report on student aspiration",description:"Document ground-level observations and specific interventions from direct mentoring of MCE students.",owner:"Kiran N.G.",category:"Student Engagement",status:"In Progress",priority:"High",dueDate:"2026-10-15",progress:25,nextStep:"Consolidate observations on aspiration, internships, hackathons, projects and time management.",comments:"To be shared formally with committee."}
+];
+
+let state = {items:[], editingId:null, view:"dashboard", apiUrl:localStorage.getItem("mce_api_url")||"", editKey:localStorage.getItem("mce_edit_key")||""};
+
+const $ = s=>document.querySelector(s);
+const $$ = s=>[...document.querySelectorAll(s)];
+
+function uid(){return "MCE-"+Math.random().toString(36).slice(2,7).toUpperCase()}
+function nowISO(){return new Date().toISOString()}
+function initials(name){return (name||"?").split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function isOverdue(x){return x.status!=="Done" && x.dueDate && new Date(x.dueDate+"T23:59:59") < new Date()}
+function statusClass(s){return {"Open":"status-open","In Progress":"status-progress","Blocked":"status-blocked","Done":"status-done"}[s]||"status-open"}
+function priorityClass(p){return {"High":"p-high","Medium":"p-medium","Low":"p-low"}[p]||"p-medium"}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+
+async function api(action,payload){
+  if(!state.apiUrl) throw new Error("No API URL");
+  if(action==="list"){
+    const r=await fetch(state.apiUrl+"?action=list&_="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error("Load failed");
+    return r.json();
+  }
+  const r=await fetch(state.apiUrl,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action,payload,editKey:state.editKey})
+  });
+  if(!r.ok) throw new Error("Save failed");
+  const data=await r.json();
+  if(data.ok===false) throw new Error(data.error||"API error");
+  return data;
+}
+
+async function loadData(){
+  try{
+    if(state.apiUrl){
+      const data=await api("list");
+      state.items=(data.items||[]).map(normalize);
+      setSync(true,"Connected to Google Sheet");
+    }else{
+      const local=JSON.parse(localStorage.getItem("mce_actions")||"null");
+      if(local?.length) state.items=local.map(normalize);
+      else state.items=SEED.map((x,i)=>normalize({...x,id:`MCE-${String(i+1).padStart(3,"0")}`,createdAt:nowISO(),updatedAt:nowISO()}));
+      persistLocal();
+      setSync(false,"Local browser storage");
+    }
+  }catch(e){
+    console.error(e);
+    const local=JSON.parse(localStorage.getItem("mce_actions")||"null");
+    state.items=(local?.length?local:SEED).map((x,i)=>normalize({...x,id:x.id||`MCE-${String(i+1).padStart(3,"0")}`}));
+    setSync(false,"API unavailable — local fallback");
+    toast("Could not connect to Google Sheet. Showing local data.");
+  }
+  render();
+}
+
+function normalize(x){
+  return {id:x.id||uid(),title:x.title||"",description:x.description||"",owner:x.owner||"",category:x.category||"General",
+  status:x.status||"Open",priority:x.priority||"Medium",dueDate:x.dueDate||"",progress:Number(x.progress||0),
+  nextStep:x.nextStep||"",comments:x.comments||"",createdAt:x.createdAt||nowISO(),updatedAt:x.updatedAt||nowISO()};
+}
+function persistLocal(){localStorage.setItem("mce_actions",JSON.stringify(state.items))}
+function setSync(ok,label){$("#syncDot").className="sync-dot "+(ok?"ok":"warn");$("#syncLabel").textContent=label}
+
+function filtered(){
+  const q=$("#globalSearch").value.trim().toLowerCase();
+  const sf=$("#statusFilter")?.value||"", pf=$("#priorityFilter")?.value||"", cf=$("#categoryFilter")?.value||"", df=$("#dueFilter")?.value||"";
+  return state.items.filter(x=>{
+    const hay=[x.id,x.title,x.description,x.owner,x.category,x.status,x.priority,x.nextStep,x.comments].join(" ").toLowerCase();
+    return (!q||hay.includes(q))&&(!sf||x.status===sf)&&(!pf||x.priority===pf)&&(!cf||x.category===cf)&&(!df||x.dueDate<=df);
+  }).sort((a,b)=>{
+    const p={High:0,Medium:1,Low:2}; return (p[a.priority]-p[b.priority]) || String(a.dueDate).localeCompare(String(b.dueDate));
+  });
+}
+
+function rowHTML(x,compact=false){
+  const dueCls=isOverdue(x)?"due-late":"";
+  return `<tr>
+  <td class="issue-key">${esc(x.id)}</td>
+  <td class="titlecell">${esc(x.title)}${compact?"":`<div class="muted" style="font-weight:400;margin-top:3px">${esc(x.description).slice(0,120)}</div>`}</td>
+  <td><div class="owner"><div class="avatar">${esc(initials(x.owner))}</div>${esc(x.owner)}</div></td>
+  <td>${esc(x.category)}</td>
+  <td><span class="badge ${statusClass(x.status)}">${esc(x.status)}</span></td>
+  <td><span class="badge ${priorityClass(x.priority)}">${esc(x.priority)}</span></td>
+  <td class="${dueCls}">${esc(x.dueDate||"—")}</td>
+  <td><div class="progress" title="${x.progress}%"><span style="width:${Math.max(0,Math.min(100,x.progress))}%"></span></div><div class="muted" style="font-size:11px;margin-top:3px">${x.progress}%</div></td>
+  ${compact?"":`<td style="min-width:220px">${esc(x.nextStep||"—")}</td>`}
+  <td><div class="row-actions"><button class="iconbtn" onclick="editIssue('${x.id}')">Edit</button></div></td>
+  </tr>`
+}
+
+function render(){
+  const items=filtered();
+  $("#kpiTotal").textContent=state.items.length;
+  $("#kpiProgress").textContent=state.items.filter(x=>x.status==="In Progress").length;
+  $("#kpiBlocked").textContent=state.items.filter(x=>x.status==="Blocked").length;
+  $("#kpiDone").textContent=state.items.filter(x=>x.status==="Done").length;
+  $("#kpiOverdue").textContent=state.items.filter(isOverdue).length;
+  const priority=state.items.filter(x=>x.status!=="Done").sort((a,b)=>(a.priority==="High"?0:1)-(b.priority==="High"?0:1)).slice(0,10);
+  $("#dashboardRows").innerHTML=priority.length?priority.map(x=>rowHTML(x,true)).join(""):`<tr><td colspan="9" class="empty">No actions</td></tr>`;
+  $("#listRows").innerHTML=items.length?items.map(x=>rowHTML(x,false)).join(""):`<tr><td colspan="10" class="empty">No matching actions</td></tr>`;
+  $("#resultCount").textContent=`${items.length} of ${state.items.length}`;
+  renderKanban(items);
+  refreshCategories();
+}
+
+function refreshCategories(){
+  const cats=[...new Set(state.items.map(x=>x.category).filter(Boolean))].sort();
+  const cf=$("#categoryFilter"), current=cf.value;
+  cf.innerHTML=`<option value="">All Categories</option>`+cats.map(x=>`<option>${esc(x)}</option>`).join("");
+  cf.value=current;
+  $("#categoryList").innerHTML=cats.map(x=>`<option value="${esc(x)}">`).join("");
+}
+
+function renderKanban(items){
+  const statuses=["Open","In Progress","Blocked","Done"];
+  $("#kanban").innerHTML=statuses.map(s=>{
+    const arr=items.filter(x=>x.status===s);
+    return `<div class="column"><h4>${esc(s)} · ${arr.length}</h4>${arr.map(x=>`<div class="issue-card" onclick="editIssue('${x.id}')">
+      <span class="issue-key">${esc(x.id)}</span><strong>${esc(x.title)}</strong>
+      <div class="meta"><span class="badge ${priorityClass(x.priority)}">${esc(x.priority)}</span><span>${esc(x.dueDate||"No due date")}</span></div>
+      <div class="meta" style="margin-top:8px"><span>${esc(x.owner)}</span><span>${x.progress}%</span></div>
+    </div>`).join("")||`<div class="muted" style="padding:12px">No items</div>`}</div>`
+  }).join("");
+}
+
+function switchView(v){
+  state.view=v;
+  ["dashboard","list","board"].forEach(x=>$("#"+x+"View").classList.toggle("view-hidden",x!==v));
+  $$("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+}
+
+function openIssueModal(x=null){
+  state.editingId=x?.id||null;
+  $("#modalTitle").textContent=x?"Update Action":"Create Action";
+  $("#deleteBtn").style.display=x?"inline-block":"none";
+  $("#fTitle").value=x?.title||""; $("#fDescription").value=x?.description||""; $("#fOwner").value=x?.owner||"";
+  $("#fCategory").value=x?.category||""; $("#fStatus").value=x?.status||"Open"; $("#fPriority").value=x?.priority||"Medium";
+  $("#fDue").value=x?.dueDate||""; $("#fProgress").value=x?.progress??0; $("#fNextStep").value=x?.nextStep||""; $("#fComments").value=x?.comments||"";
+  $("#issueModal").classList.add("show");
+  setTimeout(()=>$("#fTitle").focus(),100);
+}
+function closeIssueModal(){$("#issueModal").classList.remove("show")}
+function editIssue(id){openIssueModal(state.items.find(x=>x.id===id))}
+
+async function saveIssue(){
+  const title=$("#fTitle").value.trim(); if(!title){toast("Action title is required");return}
+  const existing=state.items.find(x=>x.id===state.editingId);
+  const item=normalize({
+    ...(existing||{}),
+    id:existing?.id||uid(),
+    title,description:$("#fDescription").value.trim(),owner:$("#fOwner").value.trim(),
+    category:$("#fCategory").value.trim()||"General",status:$("#fStatus").value,priority:$("#fPriority").value,
+    dueDate:$("#fDue").value,progress:Number($("#fProgress").value||0),nextStep:$("#fNextStep").value.trim(),
+    comments:$("#fComments").value.trim(),createdAt:existing?.createdAt||nowISO(),updatedAt:nowISO()
+  });
+  try{
+    if(state.apiUrl) await api(existing?"update":"create",item);
+    const idx=state.items.findIndex(x=>x.id===item.id);
+    if(idx>=0) state.items[idx]=item; else state.items.push(item);
+    persistLocal(); closeIssueModal(); render(); toast(existing?"Action updated":"Action created");
+  }catch(e){toast("Save failed: "+e.message)}
+}
+
+async function deleteIssue(){
+  const item=state.items.find(x=>x.id===state.editingId); if(!item)return;
+  if(!confirm(`Delete ${item.id} — ${item.title}?`))return;
+  try{
+    if(state.apiUrl) await api("delete",{id:item.id});
+    state.items=state.items.filter(x=>x.id!==item.id);persistLocal();closeIssueModal();render();toast("Action deleted");
+  }catch(e){toast("Delete failed: "+e.message)}
+}
+
+function exportCSV(){
+  const cols=["id","title","description","owner","category","status","priority","dueDate","progress","nextStep","comments","createdAt","updatedAt"];
+  const quote=v=>`"${String(v??"").replaceAll('"','""')}"`;
+  const csv=[cols.join(","),...state.items.map(x=>cols.map(c=>quote(x[c])).join(","))].join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="MCE_Placement_Action_Tracker.csv";a.click();URL.revokeObjectURL(a.href);
+}
+function openSettings(){$("#apiUrl").value=state.apiUrl;$("#editKey").value=state.editKey;$("#settingsModal").classList.add("show")}
+function closeSettings(){$("#settingsModal").classList.remove("show")}
+async function saveSettings(){
+  state.apiUrl=$("#apiUrl").value.trim();state.editKey=$("#editKey").value;
+  localStorage.setItem("mce_api_url",state.apiUrl);localStorage.setItem("mce_edit_key",state.editKey);
+  closeSettings();await loadData();toast(state.apiUrl?"Connected settings saved":"Local mode enabled");
+}
+
+$("#createBtn").onclick=()=>openIssueModal();
+$("#saveBtn").onclick=saveIssue;
+$("#deleteBtn").onclick=deleteIssue;
+$("#settingsBtn").onclick=openSettings;
+$("#saveSettings").onclick=saveSettings;
+$("#refreshBtn").onclick=loadData;
+$("#exportBtn").onclick=exportCSV;
+$("#globalSearch").oninput=render;
+["statusFilter","priorityFilter","categoryFilter","dueFilter"].forEach(id=>$("#"+id).onchange=render);
+$("#clearFilters").onclick=()=>{["statusFilter","priorityFilter","categoryFilter","dueFilter"].forEach(id=>$("#"+id).value="");render()}
+$$("[data-view]").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+window.onclick=e=>{if(e.target===$("#issueModal"))closeIssueModal(); if(e.target===$("#settingsModal"))closeSettings()}
+loadData();
+</script>
+</body>
+</html>
