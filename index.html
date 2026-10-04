@@ -207,7 +207,7 @@ tr:hover td{background:#fafbfc}
   <div class="dialog settings">
     <div class="dialog-head"><h2 id="settingsTitle">Data Connection</h2><button class="iconbtn" onclick="closeSettings()" aria-label="Close settings dialog" title="Close">✕</button></div>
     <div class="dialog-body">
-      <div class="note">Leave the URL blank to use browser local storage. After deploying the supplied Google Apps Script as a Web App, paste its <b>/exec</b> URL here.</div>
+      <div class="note">Leave the URL blank to use browser local storage. After deploying the supplied Google Apps Script as a Web App, paste its <b>/exec</b> URL here. This GitHub-compatible edition uses JSONP for reads and background POSTs for writes.</div>
       <div class="field" style="margin-top:14px"><label for="apiUrl">Google Apps Script Web App URL</label><input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
       <div class="field" style="margin-top:14px"><label for="editKey">Optional edit key</label><input id="editKey" type="password" placeholder="Required only if you set EDIT_KEY in Code.gs"></div>
       <div class="note" style="margin-top:14px">The edit key is stored only in this browser's local storage. For high-security or public deployments, use authenticated APIs rather than a shared key.</div>
@@ -252,22 +252,48 @@ function statusClass(s){return {"Open":"status-open","In Progress":"status-progr
 function priorityClass(p){return {"High":"p-high","Medium":"p-medium","Low":"p-low"}[p]||"p-medium"}
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 
+function jsonpList(){
+  return new Promise((resolve,reject)=>{
+    if(!state.apiUrl) return reject(new Error("No API URL"));
+    const callbackName = "mceJsonp_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    const timer = setTimeout(()=>{ cleanup(); reject(new Error("Google Apps Script did not respond")); },15000);
+
+    function cleanup(){
+      clearTimeout(timer);
+      try{ delete window[callbackName]; }catch(e){ window[callbackName]=undefined; }
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = data => {
+      cleanup();
+      if(data && data.ok === false) reject(new Error(data.error || "API error"));
+      else resolve(data);
+    };
+
+    const sep = state.apiUrl.includes("?") ? "&" : "?";
+    script.src = state.apiUrl + sep + "action=list&callback=" +
+                 encodeURIComponent(callbackName) + "&_=" + Date.now();
+    script.onerror = ()=>{ cleanup(); reject(new Error("Unable to load Google Apps Script endpoint")); };
+    document.head.appendChild(script);
+  });
+}
+
 async function api(action,payload){
   if(!state.apiUrl) throw new Error("No API URL");
+
   if(action==="list"){
-    const r=await fetch(state.apiUrl+"?action=list&_="+Date.now(),{cache:"no-store"});
-    if(!r.ok) throw new Error("Load failed");
-    return r.json();
+    return await jsonpList();
   }
-  const r=await fetch(state.apiUrl,{
+
+  await fetch(state.apiUrl,{
     method:"POST",
+    mode:"no-cors",
     headers:{"Content-Type":"text/plain;charset=utf-8"},
     body:JSON.stringify({action,payload,editKey:state.editKey})
   });
-  if(!r.ok) throw new Error("Save failed");
-  const data=await r.json();
-  if(data.ok===false) throw new Error(data.error||"API error");
-  return data;
+
+  return {ok:true,opaque:true};
 }
 
 async function loadData(){
@@ -394,10 +420,17 @@ async function saveIssue(){
     comments:$("#fComments").value.trim(),createdAt:existing?.createdAt||nowISO(),updatedAt:nowISO()
   });
   try{
-    if(state.apiUrl) await api(existing?"update":"create",item);
-    const idx=state.items.findIndex(x=>x.id===item.id);
-    if(idx>=0) state.items[idx]=item; else state.items.push(item);
-    persistLocal(); closeIssueModal(); render(); toast(existing?"Action updated":"Action created");
+    if(state.apiUrl){
+      await api(existing?"update":"create",item);
+      const idx=state.items.findIndex(x=>x.id===item.id);
+      if(idx>=0) state.items[idx]=item; else state.items.push(item);
+      persistLocal(); closeIssueModal(); render(); toast(existing?"Action updated":"Action created");
+      setTimeout(()=>loadData(),900);
+    }else{
+      const idx=state.items.findIndex(x=>x.id===item.id);
+      if(idx>=0) state.items[idx]=item; else state.items.push(item);
+      persistLocal(); closeIssueModal(); render(); toast(existing?"Action updated":"Action created");
+    }
   }catch(e){toast("Save failed: "+e.message)}
 }
 
@@ -405,8 +438,15 @@ async function deleteIssue(){
   const item=state.items.find(x=>x.id===state.editingId); if(!item)return;
   if(!confirm(`Delete ${item.id} — ${item.title}?`))return;
   try{
-    if(state.apiUrl) await api("delete",{id:item.id});
-    state.items=state.items.filter(x=>x.id!==item.id);persistLocal();closeIssueModal();render();toast("Action deleted");
+    if(state.apiUrl){
+      await api("delete",{id:item.id});
+      state.items=state.items.filter(x=>x.id!==item.id);
+      persistLocal();closeIssueModal();render();toast("Action deleted");
+      setTimeout(()=>loadData(),900);
+    }else{
+      state.items=state.items.filter(x=>x.id!==item.id);
+      persistLocal();closeIssueModal();render();toast("Action deleted");
+    }
   }catch(e){toast("Delete failed: "+e.message)}
 }
 
