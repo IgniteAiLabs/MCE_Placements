@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MCE Placement Action Tracker</title>
+<title>MCE Placement Action Tracker - Accessible Edition</title>
 <meta name="description" content="Jira-style action tracker for the MCE Placement Strengthening Subcommittee" />
 <style>
 :root{
@@ -109,7 +109,7 @@ tr:hover td{background:#fafbfc}
 <div class="app">
   <header class="topbar">
     <div class="brand"><div class="logo">M</div><span>MCE Placement Tracker</span></div>
-    <div class="search"><span>⌕</span><input id="globalSearch" placeholder="Search actions, owners, categories..." /></div>
+    <div class="search"><span>⌕</span><input id="globalSearch" aria-label="Search actions, owners, categories" placeholder="Search actions, owners, categories..." /></div>
     <div class="top-actions">
       <button class="btn secondary" id="settingsBtn">⚙ Settings</button>
       <button class="btn primary" id="createBtn">＋ Create Action</button>
@@ -156,10 +156,10 @@ tr:hover td{background:#fafbfc}
       <section id="listView" class="view-hidden">
         <div class="header"><div><h1>Action Register</h1><p>Single source of truth for all committee actions.</p></div></div>
         <div class="toolbar">
-          <select id="statusFilter"><option value="">All Statuses</option><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select>
-          <select id="priorityFilter"><option value="">All Priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
-          <select id="categoryFilter"><option value="">All Categories</option></select>
-          <input type="date" id="dueFilter" title="Show actions due on or before date">
+          <select id="statusFilter" aria-label="Filter by status"><option value="">All Statuses</option><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select>
+          <select id="priorityFilter" aria-label="Filter by priority"><option value="">All Priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
+          <select id="categoryFilter" aria-label="Filter by category"><option value="">All Categories</option></select>
+          <input type="date" id="dueFilter" aria-label="Filter actions due on or before date" title="Show actions due on or before date">
           <button class="btn" id="clearFilters">Clear filters</button>
         </div>
         <div class="panel">
@@ -178,21 +178,21 @@ tr:hover td{background:#fafbfc}
   </div>
 </div>
 
-<div class="modal" id="issueModal">
+<div class="modal" id="issueModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="dialog">
-    <div class="dialog-head"><h2 id="modalTitle">Create Action</h2><button class="iconbtn" onclick="closeIssueModal()">✕</button></div>
+    <div class="dialog-head"><h2 id="modalTitle">Create Action</h2><button class="iconbtn" onclick="closeIssueModal()" aria-label="Close action dialog" title="Close">✕</button></div>
     <div class="dialog-body">
       <div class="formgrid">
-        <div class="field full"><label>Action title</label><input id="fTitle" placeholder="e.g., Build recruiter feedback system"></div>
-        <div class="field full"><label>Description / success criteria</label><textarea id="fDescription"></textarea></div>
-        <div class="field"><label>Owner</label><input id="fOwner" placeholder="Placement Cell / Kiran / Committee..."></div>
-        <div class="field"><label>Category</label><input id="fCategory" list="categoryList" placeholder="Data & Analytics"></div>
-        <div class="field"><label>Status</label><select id="fStatus"><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select></div>
-        <div class="field"><label>Priority</label><select id="fPriority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
-        <div class="field"><label>Due date</label><input type="date" id="fDue"></div>
-        <div class="field"><label>Progress %</label><input type="number" id="fProgress" min="0" max="100" value="0"></div>
-        <div class="field full"><label>Next step</label><textarea id="fNextStep" placeholder="What must happen next?"></textarea></div>
-        <div class="field full"><label>Update / comments</label><textarea id="fComments" placeholder="Latest update, dependencies, decisions..."></textarea></div>
+        <div class="field full"><label for="fTitle">Action title</label><input id="fTitle" placeholder="e.g., Build recruiter feedback system"></div>
+        <div class="field full"><label for="fDescription">Description / success criteria</label><textarea id="fDescription"></textarea></div>
+        <div class="field"><label for="fOwner">Owner</label><input id="fOwner" placeholder="Placement Cell / Kiran / Committee..."></div>
+        <div class="field"><label for="fCategory">Category</label><input id="fCategory" list="categoryList" placeholder="Data & Analytics"></div>
+        <div class="field"><label for="fStatus">Status</label><select id="fStatus"><option>Open</option><option>In Progress</option><option>Blocked</option><option>Done</option></select></div>
+        <div class="field"><label for="fPriority">Priority</label><select id="fPriority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div class="field"><label for="fDue">Due date</label><input type="date" id="fDue"></div>
+        <div class="field"><label for="fProgress">Progress %</label><input type="number" id="fProgress" min="0" max="100" value="0"></div>
+        <div class="field full"><label for="fNextStep">Next step</label><textarea id="fNextStep" placeholder="What must happen next?"></textarea></div>
+        <div class="field full"><label for="fComments">Update / comments</label><textarea id="fComments" placeholder="Latest update, dependencies, decisions..."></textarea></div>
       </div>
     </div>
     <div class="dialog-foot">
@@ -203,13 +203,13 @@ tr:hover td{background:#fafbfc}
   </div>
 </div>
 
-<div class="modal" id="settingsModal">
+<div class="modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="dialog settings">
-    <div class="dialog-head"><h2>Data Connection</h2><button class="iconbtn" onclick="closeSettings()">✕</button></div>
+    <div class="dialog-head"><h2 id="settingsTitle">Data Connection</h2><button class="iconbtn" onclick="closeSettings()" aria-label="Close settings dialog" title="Close">✕</button></div>
     <div class="dialog-body">
       <div class="note">Leave the URL blank to use browser local storage. After deploying the supplied Google Apps Script as a Web App, paste its <b>/exec</b> URL here.</div>
-      <div class="field" style="margin-top:14px"><label>Google Apps Script Web App URL</label><input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
-      <div class="field" style="margin-top:14px"><label>Optional edit key</label><input id="editKey" type="password" placeholder="Required only if you set EDIT_KEY in Code.gs"></div>
+      <div class="field" style="margin-top:14px"><label for="apiUrl">Google Apps Script Web App URL</label><input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+      <div class="field" style="margin-top:14px"><label for="editKey">Optional edit key</label><input id="editKey" type="password" placeholder="Required only if you set EDIT_KEY in Code.gs"></div>
       <div class="note" style="margin-top:14px">The edit key is stored only in this browser's local storage. For high-security or public deployments, use authenticated APIs rather than a shared key.</div>
     </div>
     <div class="dialog-foot"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn primary" id="saveSettings">Save & Connect</button></div>
