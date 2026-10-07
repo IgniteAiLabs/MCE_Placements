@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MCE Placement Action Tracker - Accessible Edition</title>
+<title>MCE Placement Action Tracker - Master Edition</title>
 <meta name="description" content="Jira-style action tracker for the MCE Placement Strengthening Subcommittee" />
 <style>
 :root{
@@ -121,11 +121,15 @@ tr:hover td{background:#fafbfc}
       <div class="project">
         <h2>Placement Strengthening</h2>
         <p>Subcommittee Action Board</p>
+        <p style="margin-top:5px;font-size:11px">Master tracker • Actions + evidence</p>
       </div>
       <nav class="nav">
         <button data-view="dashboard" class="active">▦ Dashboard</button>
         <button data-view="list">☷ Action Register</button>
         <button data-view="board">▤ Board</button>
+        <hr>
+        <button id="supportDocsBtn" title="Open supporting documents">📁 Supporting Documents</button>
+        <button id="editSupportDocsBtn" title="Edit supporting documents link">✎ Edit Documents URL</button>
         <hr>
         <button id="refreshBtn">↻ Refresh Data</button>
         <button id="exportBtn">⇩ Export CSV</button>
@@ -210,7 +214,12 @@ tr:hover td{background:#fafbfc}
       <div class="note">Leave the URL blank to use browser local storage. After deploying the supplied Google Apps Script as a Web App, paste its <b>/exec</b> URL here. This GitHub-compatible edition uses JSONP for reads and background POSTs for writes.</div>
       <div class="field" style="margin-top:14px"><label for="apiUrl">Google Apps Script Web App URL</label><input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
       <div class="field" style="margin-top:14px"><label for="editKey">Optional edit key</label><input id="editKey" type="password" placeholder="Required only if you set EDIT_KEY in Code.gs"></div>
-      <div class="note" style="margin-top:14px">The edit key is stored only in this browser's local storage. For high-security or public deployments, use authenticated APIs rather than a shared key.</div>
+      <div class="field" style="margin-top:14px">
+        <label for="supportDocsUrl">Supporting Documents URL</label>
+        <input id="supportDocsUrl" type="url" placeholder="https://drive.google.com/drive/folders/...">
+        <div class="muted" style="font-size:12px">Paste the Google Drive folder, shared Drive folder, Google Doc, Sheet, or other supporting-document URL. The left-side menu opens this link in a new browser tab.</div>
+      </div>
+      <div class="note" style="margin-top:14px">The edit key and Supporting Documents URL are stored only in this browser's local storage. For high-security or public deployments, use authenticated APIs rather than a shared key.</div>
     </div>
     <div class="dialog-foot"><button class="btn" onclick="closeSettings()">Cancel</button><button class="btn primary" id="saveSettings">Save & Connect</button></div>
   </div>
@@ -238,7 +247,14 @@ const SEED = [
 {title:"Alumni observation report on student aspiration",description:"Document ground-level observations and specific interventions from direct mentoring of MCE students.",owner:"Kiran N.G.",category:"Student Engagement",status:"In Progress",priority:"High",dueDate:"2026-10-15",progress:25,nextStep:"Consolidate observations on aspiration, internships, hackathons, projects and time management.",comments:"To be shared formally with committee."}
 ];
 
-let state = {items:[], editingId:null, view:"dashboard", apiUrl:localStorage.getItem("mce_api_url")||"", editKey:localStorage.getItem("mce_edit_key")||""};
+let state = {
+  items:[],
+  editingId:null,
+  view:"dashboard",
+  apiUrl:localStorage.getItem("mce_api_url")||"",
+  editKey:localStorage.getItem("mce_edit_key")||"",
+  supportDocsUrl:localStorage.getItem("mce_support_docs_url")||""
+};
 
 const $ = s=>document.querySelector(s);
 const $$ = s=>[...document.querySelectorAll(s)];
@@ -456,19 +472,53 @@ function exportCSV(){
   const csv=[cols.join(","),...state.items.map(x=>cols.map(c=>quote(x[c])).join(","))].join("\n");
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="MCE_Placement_Action_Tracker.csv";a.click();URL.revokeObjectURL(a.href);
 }
-function openSettings(){$("#apiUrl").value=state.apiUrl;$("#editKey").value=state.editKey;$("#settingsModal").classList.add("show")}
+function openSettings(focusSupportDocs=false){
+  $("#apiUrl").value=state.apiUrl;
+  $("#editKey").value=state.editKey;
+  $("#supportDocsUrl").value=state.supportDocsUrl;
+  $("#settingsModal").classList.add("show");
+  if(focusSupportDocs) setTimeout(()=>$("#supportDocsUrl").focus(),100);
+}
 function closeSettings(){$("#settingsModal").classList.remove("show")}
 async function saveSettings(){
-  state.apiUrl=$("#apiUrl").value.trim();state.editKey=$("#editKey").value;
-  localStorage.setItem("mce_api_url",state.apiUrl);localStorage.setItem("mce_edit_key",state.editKey);
-  closeSettings();await loadData();toast(state.apiUrl?"Connected settings saved":"Local mode enabled");
+  state.apiUrl=$("#apiUrl").value.trim();
+  state.editKey=$("#editKey").value;
+  state.supportDocsUrl=$("#supportDocsUrl").value.trim();
+
+  localStorage.setItem("mce_api_url",state.apiUrl);
+  localStorage.setItem("mce_edit_key",state.editKey);
+  localStorage.setItem("mce_support_docs_url",state.supportDocsUrl);
+
+  closeSettings();
+  await loadData();
+  toast(state.apiUrl?"Settings saved":"Settings saved — local data mode");
+}
+function openSupportingDocuments(){
+  const url=(state.supportDocsUrl||"").trim();
+  if(!url){
+    toast("Supporting Documents URL is not configured");
+    openSettings(true);
+    return;
+  }
+  let safeUrl=url;
+  if(!/^https?:\/\//i.test(safeUrl)) safeUrl="https://"+safeUrl;
+  try{
+    const parsed=new URL(safeUrl);
+    if(!["http:","https:"].includes(parsed.protocol)) throw new Error("Unsupported URL");
+    window.open(parsed.href,"_blank","noopener,noreferrer");
+  }catch(e){
+    toast("Please enter a valid Supporting Documents URL");
+    openSettings(true);
+  }
 }
 
 $("#createBtn").onclick=()=>openIssueModal();
 $("#saveBtn").onclick=saveIssue;
 $("#deleteBtn").onclick=deleteIssue;
-$("#settingsBtn").onclick=openSettings;
+$("#settingsBtn").onclick=()=>openSettings(false);
 $("#saveSettings").onclick=saveSettings;
+$("#supportDocsBtn").onclick=openSupportingDocuments;
+$("#editSupportDocsBtn").onclick=()=>openSettings(true);
 $("#refreshBtn").onclick=loadData;
 $("#exportBtn").onclick=exportCSV;
 $("#globalSearch").oninput=render;
